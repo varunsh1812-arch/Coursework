@@ -63,11 +63,17 @@ export function predictMatch(homeTeam: Team, awayTeam: Team): Prediction {
 
   const poisson = poissonScoreProbabilities(lambdaHome, lambdaAway)
   const eloHome = eloWinProbability(homeTeam.eloRating, awayTeam.eloRating)
-  const eloDraw = 0.28 - Math.abs(eloHome - 0.5) * 0.3
-  const eloAway = 1 - eloHome - eloDraw
+  // Derive draw/away from the Elo win prob. With large rating gaps these can go
+  // negative, so clamp to >= 0 and renormalise into a valid distribution before blending.
+  const rawEloDraw = Math.max(0, 0.28 - Math.abs(eloHome - 0.5) * 0.3)
+  const rawEloAway = Math.max(0, 1 - eloHome - rawEloDraw)
+  const eloSum = eloHome + rawEloDraw + rawEloAway
+  const eloHomeNorm = eloHome / eloSum
+  const eloDraw = rawEloDraw / eloSum
+  const eloAway = rawEloAway / eloSum
 
-  // Blend Elo and Poisson (60/40 weight)
-  const homeWinProb = 0.6 * eloHome + 0.4 * poisson.homeWin
+  // Blend two valid distributions (Elo 60% / Poisson 40%) -> result stays valid & non-negative
+  const homeWinProb = 0.6 * eloHomeNorm + 0.4 * poisson.homeWin
   const drawProb = 0.6 * eloDraw + 0.4 * poisson.draw
   const awayWinProb = 0.6 * eloAway + 0.4 * poisson.awayWin
 

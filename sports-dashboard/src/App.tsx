@@ -5,7 +5,7 @@ import TeamAnalytics from './components/TeamAnalytics'
 import PlayerAnalytics from './components/PlayerAnalytics'
 import PredictionPanel from './components/PredictionPanel'
 import LiveFeedPanel from './components/LiveFeedPanel'
-import { useLiveFeed } from './hooks/useLiveFeed'
+import { useLiveFeed } from './context/LiveFeedContext'
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: '🏠' },
@@ -17,7 +17,7 @@ const TABS = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('overview')
-  const { liveMatches, ticker, latestEvents } = useLiveFeed()
+  const { liveMatches, ticker } = useLiveFeed()
 
   const liveCount = liveMatches.filter(m => m.status === 'LIVE').length
 

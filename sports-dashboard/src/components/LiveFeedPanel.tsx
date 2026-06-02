@@ -1,4 +1,4 @@
-import { useLiveFeed } from '../hooks/useLiveFeed'
+import { useLiveFeed } from '../context/LiveFeedContext'
 import { predictMatch, liveProbability } from '../models/predictionEngine'
 import { premierLeagueTeams } from '../data/teamsData'
 import WinProbGauge from './charts/WinProbGauge'
