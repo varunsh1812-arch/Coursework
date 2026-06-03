@@ -1,31 +1,12 @@
-import { useRef, useEffect } from 'react'
-import { recentMatches } from '../data/matchesData'
-import { premierLeagueTeams } from '../data/teamsData'
+import { getTeam } from '../data/teamsData'
+import type { Match } from '../types'
 
 interface Props {
-  liveMatches: typeof recentMatches
+  liveMatches: Match[]
   ticker: string[]
 }
 
 export default function LiveScoreTicker({ liveMatches, ticker }: Props) {
-  const getTeam = (id: string) => premierLeagueTeams.find(t => t.id === id)
-
-  const tickerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = tickerRef.current
-    if (!el) return
-    let pos = el.scrollWidth
-    let frame: number
-    const step = () => {
-      pos -= 1
-      if (pos < -el.scrollWidth) pos = window.innerWidth
-      el.style.transform = `translateX(${pos}px)`
-      frame = requestAnimationFrame(step)
-    }
-    frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [ticker])
-
   return (
     <div className="bg-dark-800 border-b border-dark-600">
       {/* Live Score Cards */}
@@ -71,9 +52,9 @@ export default function LiveScoreTicker({ liveMatches, ticker }: Props) {
         })}
       </div>
 
-      {/* Scrolling Ticker */}
+      {/* Scrolling Ticker — pure CSS marquee (two copies translated by -50% loops seamlessly) */}
       <div className="bg-primary-900 overflow-hidden py-1 relative border-t border-primary-700">
-        <div className="inline-flex gap-8 whitespace-nowrap" ref={tickerRef} style={{ willChange: 'transform' }}>
+        <div className="flex w-max gap-8 whitespace-nowrap animate-ticker" style={{ willChange: 'transform' }}>
           {[...ticker, ...ticker].map((item, i) => (
             <span key={i} className="text-xs text-blue-200 font-medium">
               <span className="text-yellow-400 mr-2">●</span>

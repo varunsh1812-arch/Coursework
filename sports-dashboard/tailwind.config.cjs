@@ -20,14 +20,14 @@ module.exports = {
         }
       },
       animation: {
-        'ticker': 'ticker 30s linear infinite',
+        'ticker': 'ticker 40s linear infinite',
         'pulse-fast': 'pulse 1s ease-in-out infinite',
         'fade-in': 'fadeIn 0.5s ease-in'
       },
       keyframes: {
         ticker: {
-          '0%': { transform: 'translateX(100%)' },
-          '100%': { transform: 'translateX(-100%)' }
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' }
         },
         fadeIn: {
           '0%': { opacity: '0', transform: 'translateY(10px)' },

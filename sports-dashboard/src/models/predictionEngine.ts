@@ -40,8 +40,9 @@ export function poissonScoreProbabilities(
 // Compute expected goals based on team stats
 function computeExpectedGoals(attackTeam: Team, defenseTeam: Team, isHome: boolean): number {
   const homeBonus = isHome ? 0.25 : -0.1
-  const attackStrength = attackTeam.stats.xG / (attackTeam.stats.played * 1.5)
-  const defenseWeakness = defenseTeam.stats.xGA / (defenseTeam.stats.played * 1.2)
+  // Guard the divisor so a team with 0 games played can't produce NaN/Infinity.
+  const attackStrength = attackTeam.stats.xG / (Math.max(1, attackTeam.stats.played) * 1.5)
+  const defenseWeakness = defenseTeam.stats.xGA / (Math.max(1, defenseTeam.stats.played) * 1.2)
   const formMultiplier = computeFormMultiplier(attackTeam.stats.form)
   const leagueAvgGoals = 1.4
 
@@ -63,14 +64,13 @@ export function predictMatch(homeTeam: Team, awayTeam: Team): Prediction {
 
   const poisson = poissonScoreProbabilities(lambdaHome, lambdaAway)
   const eloHome = eloWinProbability(homeTeam.eloRating, awayTeam.eloRating)
-  // Derive draw/away from the Elo win prob. With large rating gaps these can go
-  // negative, so clamp to >= 0 and renormalise into a valid distribution before blending.
-  const rawEloDraw = Math.max(0, 0.28 - Math.abs(eloHome - 0.5) * 0.3)
-  const rawEloAway = Math.max(0, 1 - eloHome - rawEloDraw)
-  const eloSum = eloHome + rawEloDraw + rawEloAway
-  const eloHomeNorm = eloHome / eloSum
-  const eloDraw = rawEloDraw / eloSum
-  const eloAway = rawEloAway / eloSum
+  // Carve out a draw share that shrinks as the match becomes more lopsided, then split the
+  // remaining probability between home and away by relative strength. Valid by construction
+  // (every term >= 0 and they sum to 1), so no clamping is needed even for extreme rating gaps.
+  const eloDrawShare = 0.28 - Math.abs(eloHome - 0.5) * 0.3
+  const eloHomeNorm = (1 - eloDrawShare) * eloHome
+  const eloDraw = eloDrawShare
+  const eloAway = (1 - eloDrawShare) * (1 - eloHome)
 
   // Blend two valid distributions (Elo 60% / Poisson 40%) -> result stays valid & non-negative
   const homeWinProb = 0.6 * eloHomeNorm + 0.4 * poisson.homeWin
@@ -109,7 +109,8 @@ export function predictMatch(homeTeam: Team, awayTeam: Team): Prediction {
     },
     {
       name: 'Clean Sheet Rate',
-      impact: (homeTeam.stats.cleanSheets - awayTeam.stats.cleanSheets) / homeTeam.stats.played,
+      impact: homeTeam.stats.cleanSheets / Math.max(1, homeTeam.stats.played) -
+        awayTeam.stats.cleanSheets / Math.max(1, awayTeam.stats.played),
       description: `${homeTeam.shortName}: ${homeTeam.stats.cleanSheets} CS | ${awayTeam.shortName}: ${awayTeam.stats.cleanSheets} CS`
     }
   ]
@@ -134,22 +135,27 @@ export function liveProbability(
   awayGoals: number,
   minute: number
 ): { home: number; draw: number; away: number } {
-  const timeRemaining = Math.max(0, 90 - minute)
+  const progress = Math.min(1, Math.max(0, minute / 90)) // 0 at kickoff, 1 at full time
   const goalDiff = homeGoals - awayGoals
 
-  // Adjust based on current score and time remaining
-  const scoreFactor = goalDiff * (1 - timeRemaining / 90) * 2
-  const adjustedHome = Math.max(0.02, Math.min(0.96, baseHomeProb + scoreFactor * 0.2))
+  // Draw mass RISES as a level game runs down (less time left to break the tie) and shrinks
+  // toward zero once a team leads. The previous formula had this inverted.
+  const drawProb = goalDiff === 0
+    ? 0.30 + progress * 0.45 // ~0.30 early -> ~0.75 near full time
+    : 0.15 * (1 - progress) // a lead late in the game leaves little room for a draw
 
-  // Draw probability decreases with time unless tied
-  const drawBase = goalDiff === 0 ? 0.4 - (minute / 90) * 0.15 : 0.05 * (timeRemaining / 90)
-  const awayAdj = Math.max(0.02, 1 - adjustedHome - drawBase)
+  // Split the remaining mass between home/away, shifted by the current lead and how much
+  // of the match has elapsed (a lead matters more the closer we are to full time).
+  const lead = goalDiff * progress
+  const homeShare = Math.min(0.98, Math.max(0.02, baseHomeProb + lead * 0.3))
+  const home = (1 - drawProb) * homeShare
+  const away = (1 - drawProb) * (1 - homeShare)
 
-  const total = adjustedHome + drawBase + awayAdj
+  const total = home + drawProb + away
   return {
-    home: adjustedHome / total,
-    draw: drawBase / total,
-    away: awayAdj / total
+    home: home / total,
+    draw: drawProb / total,
+    away: away / total
   }
 }
 

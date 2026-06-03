@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { predictMatch, modelAccuracyStats } from '../models/predictionEngine'
-import { premierLeagueTeams } from '../data/teamsData'
+import { premierLeagueTeams, getTeam } from '../data/teamsData'
 import { upcomingMatches } from '../data/matchesData'
 import WinProbGauge from './charts/WinProbGauge'
 
@@ -8,9 +8,30 @@ export default function PredictionPanel() {
   const [homeId, setHomeId] = useState('mci')
   const [awayId, setAwayId] = useState('ars')
 
-  const homeTeam = premierLeagueTeams.find(t => t.id === homeId)!
-  const awayTeam = premierLeagueTeams.find(t => t.id === awayId)!
+  // Changing the home team to whatever is currently selected away would leave both selects
+  // pointing at the same club (a nonsensical self-vs-self prediction and an uncontrolled away
+  // select). Bump the away team to a different club whenever that collision would happen.
+  const handleHomeChange = (id: string) => {
+    setHomeId(id)
+    if (id === awayId) {
+      const alt = premierLeagueTeams.find(t => t.id !== id)
+      if (alt) setAwayId(alt.id)
+    }
+  }
+
+  const homeTeam = getTeam(homeId)!
+  const awayTeam = getTeam(awayId)!
   const prediction = useMemo(() => predictMatch(homeTeam, awayTeam), [homeTeam, awayTeam])
+  // Static fixtures — compute once rather than on every dropdown change / re-render.
+  const upcomingPredictions = useMemo(
+    () => upcomingMatches.slice(0, 3).map(match => ({
+      match,
+      hTeam: getTeam(match.homeTeam)!,
+      aTeam: getTeam(match.awayTeam)!,
+      pred: predictMatch(getTeam(match.homeTeam)!, getTeam(match.awayTeam)!)
+    })),
+    []
+  )
 
   const impactColor = (impact: number) =>
     impact > 0.05 ? 'text-green-400' : impact < -0.05 ? 'text-red-400' : 'text-gray-400'
@@ -25,7 +46,7 @@ export default function PredictionPanel() {
             <label className="block text-xs text-gray-400 mb-1.5">Home Team</label>
             <select
               value={homeId}
-              onChange={e => setHomeId(e.target.value)}
+              onChange={e => handleHomeChange(e.target.value)}
               className="w-full bg-dark-700 border border-dark-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary-500"
             >
               {premierLeagueTeams.map(t => (
@@ -173,10 +194,7 @@ export default function PredictionPanel() {
         <div className="mt-6">
           <div className="text-xs text-gray-400 font-medium mb-3">Upcoming Predictions</div>
           <div className="space-y-2">
-            {upcomingMatches.slice(0, 3).map(match => {
-              const hTeam = premierLeagueTeams.find(t => t.id === match.homeTeam)!
-              const aTeam = premierLeagueTeams.find(t => t.id === match.awayTeam)!
-              const pred = predictMatch(hTeam, aTeam)
+            {upcomingPredictions.map(({ match, hTeam, aTeam, pred }) => {
               return (
                 <div key={match.id} className="flex items-center gap-2 text-xs">
                   <span className="text-gray-300 flex-1">{hTeam.shortName} vs {aTeam.shortName}</span>

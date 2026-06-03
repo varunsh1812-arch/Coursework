@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { topPlayers } from '../data/playersData'
-import { premierLeagueTeams } from '../data/teamsData'
+import { getTeam } from '../data/teamsData'
 import PlayerRadarChart from './charts/PlayerRadarChart'
+import ToggleButtonGroup from './ToggleButtonGroup'
 
 export default function PlayerAnalytics() {
   const [selected, setSelected] = useState<string[]>(['haaland', 'palmer', 'salah'])
@@ -19,8 +20,9 @@ export default function PlayerAnalytics() {
     b.stats[sortKey] - a.stats[sortKey]
   )
 
-  const getTeam = (teamId: string) => premierLeagueTeams.find(t => t.id === teamId)
-  const selectedPlayers = selected.map(id => topPlayers.find(p => p.id === id)!).filter(Boolean)
+  const selectedPlayers = selected
+    .map(id => topPlayers.find(p => p.id === id))
+    .filter((p): p is (typeof topPlayers)[number] => Boolean(p))
 
   const statColor = (value: number, max: number) => {
     const pct = value / max
@@ -129,19 +131,16 @@ export default function PlayerAnalytics() {
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white font-semibold">Top Performers</h3>
-          <div className="flex gap-2">
-            {(['goals', 'assists', 'rating', 'xG'] as const).map(k => (
-              <button
-                key={k}
-                onClick={() => setSortKey(k)}
-                className={`px-2.5 py-1 rounded text-xs transition-colors ${
-                  sortKey === k ? 'bg-primary-600 text-white' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'
-                }`}
-              >
-                {k === 'rating' ? 'Rating' : k.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          <ToggleButtonGroup
+            options={[
+              { value: 'goals', label: 'GOALS' },
+              { value: 'assists', label: 'ASSISTS' },
+              { value: 'rating', label: 'Rating' },
+              { value: 'xG', label: 'XG' }
+            ]}
+            value={sortKey}
+            onChange={v => setSortKey(v as typeof sortKey)}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

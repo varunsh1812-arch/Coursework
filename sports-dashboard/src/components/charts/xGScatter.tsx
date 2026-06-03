@@ -12,8 +12,8 @@ export default function XGScatter() {
     datasets: [{
       label: 'Teams',
       data: premierLeagueTeams.map(t => ({
-        x: parseFloat((t.stats.xG / t.stats.played).toFixed(2)),
-        y: parseFloat((t.stats.xGA / t.stats.played).toFixed(2)),
+        x: parseFloat((t.stats.xG / Math.max(1, t.stats.played)).toFixed(2)),
+        y: parseFloat((t.stats.xGA / Math.max(1, t.stats.played)).toFixed(2)),
         label: t.shortName
       })),
       backgroundColor: premierLeagueTeams.map(t => t.color + 'cc'),

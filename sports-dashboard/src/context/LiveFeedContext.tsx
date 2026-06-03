@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import type { Match, MatchEvent } from '../types'
 import { recentMatches } from '../data/matchesData'
+import { getPlayersByTeam } from '../data/playersData'
 
 export type LiveEvent = MatchEvent & { matchId: string; homeTeam: string; awayTeam: string }
 
@@ -21,6 +22,21 @@ const INITIAL_TICKER = [
   'Cole Palmer voted Premier League Player of the Month'
 ]
 
+const GOAL_DETAILS = ['Right foot shot', 'Left foot shot', 'Header', 'Penalty', 'Tap-in']
+
+// Pick a believable scorer from the team's squad, falling back gracefully if we have no
+// players on file for that team (so the simulation works for any fixture, not just City–Arsenal).
+function pickScorer(teamId: string): string {
+  const squad = getPlayersByTeam(teamId)
+  if (squad.length > 0) return squad[Math.floor(Math.random() * squad.length)].name
+  return 'Forward'
+}
+
+// Loop the fixture when it reaches full time so the dashboard always has a live match to show.
+function freshKickoff(match: Match): Match {
+  return { ...match, homeScore: 0, awayScore: 0, minute: 1, status: 'LIVE', events: [], homePossession: 50 }
+}
+
 export function LiveFeedProvider({ children }: { children: ReactNode }) {
   const [liveMatches, setLiveMatches] = useState<Match[]>(
     recentMatches.filter(m => m.status === 'LIVE')
@@ -28,40 +44,49 @@ export function LiveFeedProvider({ children }: { children: ReactNode }) {
   const [latestEvents, setLatestEvents] = useState<LiveEvent[]>([])
   const [ticker, setTicker] = useState<string[]>(INITIAL_TICKER)
 
+  // Mirror the latest matches in a ref so the interval callback always reads current state
+  // and we can compute the next state as a plain value — never calling setState inside another
+  // setState's updater (which would double-fire under StrictMode and duplicate goal events).
+  const matchesRef = useRef(liveMatches)
+  matchesRef.current = liveMatches
+
   const simulateLiveUpdate = useCallback(() => {
-    setLiveMatches(prev =>
-      prev.map(match => {
-        if (match.status !== 'LIVE') return match
-        const newMinute = Math.min(90, (match.minute || 60) + Math.floor(Math.random() * 3) + 1)
-        const scored = Math.random() < 0.08
+    const newEvents: LiveEvent[] = []
+    const newTicker: string[] = []
+
+    const updated = matchesRef.current.map(match => {
+      if (match.status !== 'LIVE') return match
+
+      const nextMinute = (match.minute ?? 0) + Math.floor(Math.random() * 3) + 1
+      if (nextMinute >= 90) return freshKickoff(match)
+
+      if (Math.random() < 0.12) {
         const isHome = Math.random() > 0.5
-
-        if (scored) {
-          const newScore = {
-            homeScore: isHome ? match.homeScore + 1 : match.homeScore,
-            awayScore: !isHome ? match.awayScore + 1 : match.awayScore
-          }
-          const goalEvent: MatchEvent = {
-            minute: newMinute,
-            type: 'goal',
-            team: isHome ? 'home' : 'away',
-            player: isHome ? 'E. Haaland' : 'B. Saka',
-            detail: 'Right foot shot'
-          }
-          setLatestEvents(prevEvents => [
-            { ...goalEvent, matchId: match.id, homeTeam: match.homeTeam, awayTeam: match.awayTeam },
-            ...prevEvents.slice(0, 9)
-          ])
-          setTicker(prevTicker => [
-            `GOAL! ${isHome ? match.homeTeam.toUpperCase() : match.awayTeam.toUpperCase()} score in minute ${newMinute}!`,
-            ...prevTicker.slice(0, 4)
-          ])
-          return { ...match, ...newScore, minute: newMinute, events: [...(match.events || []), goalEvent] }
+        const scoringTeam = isHome ? match.homeTeam : match.awayTeam
+        const goalEvent: MatchEvent = {
+          minute: nextMinute,
+          type: 'goal',
+          team: isHome ? 'home' : 'away',
+          player: pickScorer(scoringTeam),
+          detail: GOAL_DETAILS[Math.floor(Math.random() * GOAL_DETAILS.length)]
         }
+        newEvents.push({ ...goalEvent, matchId: match.id, homeTeam: match.homeTeam, awayTeam: match.awayTeam })
+        newTicker.push(`GOAL! ${goalEvent.player} (${scoringTeam.toUpperCase()}) ${nextMinute}'`)
+        return {
+          ...match,
+          minute: nextMinute,
+          homeScore: isHome ? match.homeScore + 1 : match.homeScore,
+          awayScore: isHome ? match.awayScore : match.awayScore + 1,
+          events: [...(match.events || []), goalEvent]
+        }
+      }
 
-        return { ...match, minute: newMinute, status: newMinute >= 90 ? 'FT' : 'LIVE' }
-      })
-    )
+      return { ...match, minute: nextMinute }
+    })
+
+    setLiveMatches(updated)
+    if (newEvents.length) setLatestEvents(prev => [...newEvents, ...prev].slice(0, 10))
+    if (newTicker.length) setTicker(prev => [...newTicker, ...prev].slice(0, 6))
   }, [])
 
   useEffect(() => {

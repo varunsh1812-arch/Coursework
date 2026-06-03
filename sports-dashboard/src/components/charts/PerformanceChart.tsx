@@ -4,16 +4,9 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { seasonProgressData } from '../../data/matchesData'
-import { premierLeagueTeams } from '../../data/teamsData'
+import { getTeam } from '../../data/teamsData'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
-
-const TEAM_COLORS: Record<string, string> = {
-  mci: '#6CABDD',
-  ars: '#EF0107',
-  liv: '#C8102E',
-  avl: '#95BFE5'
-}
 
 interface Props {
   metric: 'cumulativePoints' | 'xG' | 'goalsScored'
@@ -24,7 +17,7 @@ export default function PerformanceChart({ metric }: Props) {
   const labels = Array.from({ length: 36 }, (_, i) => `GW${i + 1}`)
 
   const datasets = teams.map(teamId => {
-    const team = premierLeagueTeams.find(t => t.id === teamId)!
+    const team = getTeam(teamId)!
     const teamData = seasonProgressData
       .filter(d => d.teamId === teamId)
       .sort((a, b) => a.week - b.week)
@@ -33,8 +26,8 @@ export default function PerformanceChart({ metric }: Props) {
     return {
       label: team.shortName,
       data: teamData,
-      borderColor: TEAM_COLORS[teamId],
-      backgroundColor: TEAM_COLORS[teamId] + '20',
+      borderColor: team.color,
+      backgroundColor: team.color + '20',
       borderWidth: 2.5,
       pointRadius: 0,
       pointHoverRadius: 5,

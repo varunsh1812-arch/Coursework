@@ -2,6 +2,7 @@ import { useState } from 'react'
 import PerformanceChart from './charts/PerformanceChart'
 import StatBarChart from './charts/StatBarChart'
 import XGScatter from './charts/xGScatter'
+import ToggleButtonGroup from './ToggleButtonGroup'
 import { premierLeagueTeams } from '../data/teamsData'
 
 type MetricKey = 'cumulativePoints' | 'xG' | 'goalsScored'
@@ -26,19 +27,16 @@ export default function TeamAnalytics() {
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h3 className="text-white font-semibold">Season Timeline – Top 4 Teams</h3>
-          <div className="flex gap-2">
-            {(['cumulativePoints', 'xG', 'goalsScored'] as MetricKey[]).map(m => (
-              <button
-                key={m}
-                onClick={() => setMetric(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  metric === m ? 'bg-primary-600 text-white' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'
-                }`}
-              >
-                {m === 'cumulativePoints' ? 'Points' : m === 'xG' ? 'xG' : 'Goals'}
-              </button>
-            ))}
-          </div>
+          <ToggleButtonGroup
+            size="lg"
+            options={[
+              { value: 'cumulativePoints', label: 'Points' },
+              { value: 'xG', label: 'xG' },
+              { value: 'goalsScored', label: 'Goals' }
+            ]}
+            value={metric}
+            onChange={v => setMetric(v as MetricKey)}
+          />
         </div>
         <div className="h-64">
           <PerformanceChart metric={metric} />
@@ -50,19 +48,17 @@ export default function TeamAnalytics() {
         <div className="bg-dark-800 rounded-xl border border-dark-600 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h3 className="text-white font-semibold">Team Statistics</h3>
-            <div className="flex flex-wrap gap-2">
-              {(['goals', 'xG', 'possession', 'shots', 'cleanSheets'] as StatKey[]).map(s => (
-                <button
-                  key={s}
-                  onClick={() => setStat(s)}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                    stat === s ? 'bg-primary-600 text-white' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'
-                  }`}
-                >
-                  {s === 'cleanSheets' ? 'CS' : s === 'possession' ? 'Poss' : s.toUpperCase()}
-                </button>
-              ))}
-            </div>
+            <ToggleButtonGroup
+              options={[
+                { value: 'goals', label: 'GOALS' },
+                { value: 'xG', label: 'XG' },
+                { value: 'possession', label: 'Poss' },
+                { value: 'shots', label: 'SHOTS' },
+                { value: 'cleanSheets', label: 'CS' }
+              ]}
+              value={stat}
+              onChange={v => setStat(v as StatKey)}
+            />
           </div>
           <div className="h-52">
             <StatBarChart stat={stat} />
@@ -80,19 +76,16 @@ export default function TeamAnalytics() {
       <div className="bg-dark-800 rounded-xl border border-dark-600 p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white font-semibold">Premier League Table</h3>
-          <div className="flex gap-2">
-            {(['points', 'goalsFor', 'goalsAgainst', 'xG'] as const).map(k => (
-              <button
-                key={k}
-                onClick={() => setSortKey(k)}
-                className={`px-2.5 py-1 rounded text-xs transition-colors ${
-                  sortKey === k ? 'bg-primary-600 text-white' : 'bg-dark-700 text-gray-400 hover:bg-dark-600'
-                }`}
-              >
-                {k === 'goalsFor' ? 'GF' : k === 'goalsAgainst' ? 'GA' : k.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          <ToggleButtonGroup
+            options={[
+              { value: 'points', label: 'POINTS' },
+              { value: 'goalsFor', label: 'GF' },
+              { value: 'goalsAgainst', label: 'GA' },
+              { value: 'xG', label: 'XG' }
+            ]}
+            value={sortKey}
+            onChange={v => setSortKey(v as typeof sortKey)}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

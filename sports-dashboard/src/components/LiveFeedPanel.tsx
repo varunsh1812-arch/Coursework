@@ -1,12 +1,24 @@
+import { useMemo } from 'react'
 import { useLiveFeed } from '../context/LiveFeedContext'
 import { predictMatch, liveProbability } from '../models/predictionEngine'
-import { premierLeagueTeams } from '../data/teamsData'
+import { getTeam } from '../data/teamsData'
 import WinProbGauge from './charts/WinProbGauge'
 
 export default function LiveFeedPanel() {
   const { liveMatches, latestEvents, refresh } = useLiveFeed()
 
-  const getTeam = (id: string) => premierLeagueTeams.find(t => t.id === id)
+  // Pre-match prediction only depends on the two teams, not the evolving score/minute, so
+  // memoise it per fixture instead of rebuilding the Poisson matrix on every 8s live tick.
+  const basePredictions = useMemo(() => {
+    const map: Record<string, ReturnType<typeof predictMatch>> = {}
+    for (const match of liveMatches) {
+      const home = getTeam(match.homeTeam)
+      const away = getTeam(match.awayTeam)
+      if (home && away) map[match.id] = predictMatch(home, away)
+    }
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveMatches.map(m => `${m.homeTeam}-${m.awayTeam}`).join(',')])
 
   const eventIcon = (type: string) => {
     if (type === 'goal') return '⚽'
@@ -43,12 +55,12 @@ export default function LiveFeedPanel() {
           const away = getTeam(match.awayTeam)
           if (!home || !away) return null
 
-          const basePred = predictMatch(home, away)
+          const basePred = basePredictions[match.id] ?? predictMatch(home, away)
           const liveProbs = liveProbability(
             basePred.homeWinProb,
             match.homeScore,
             match.awayScore,
-            match.minute || 60
+            match.minute ?? 0
           )
 
           return (

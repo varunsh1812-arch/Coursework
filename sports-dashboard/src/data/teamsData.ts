@@ -99,55 +99,7 @@ export const premierLeagueTeams: Team[] = [
   }
 ]
 
-export const nbaTeams: Team[] = [
-  {
-    id: 'bos', name: 'Boston Celtics', shortName: 'BOS', logo: '🍀',
-    color: '#007A33', league: 'NBA', eloRating: 1750,
-    stats: {
-      played: 70, wins: 58, draws: 0, losses: 12,
-      goalsFor: 7854, goalsAgainst: 7102, points: 116,
-      form: ['W', 'W', 'W', 'L', 'W'],
-      homeWins: 32, awayWins: 26, cleanSheets: 0,
-      avgPossession: 50, avgShots: 91.2, avgShotsOnTarget: 44.1,
-      xG: 0, xGA: 0
-    }
-  },
-  {
-    id: 'okc', name: 'OKC Thunder', shortName: 'OKC', logo: '⚡',
-    color: '#007AC1', league: 'NBA', eloRating: 1720,
-    stats: {
-      played: 70, wins: 55, draws: 0, losses: 15,
-      goalsFor: 7623, goalsAgainst: 7198, points: 110,
-      form: ['W', 'W', 'D', 'W', 'L'],
-      homeWins: 30, awayWins: 25, cleanSheets: 0,
-      avgPossession: 50, avgShots: 88.4, avgShotsOnTarget: 42.8,
-      xG: 0, xGA: 0
-    }
-  },
-  {
-    id: 'den', name: 'Denver Nuggets', shortName: 'DEN', logo: '⛰️',
-    color: '#0E2240', league: 'NBA', eloRating: 1700,
-    stats: {
-      played: 70, wins: 52, draws: 0, losses: 18,
-      goalsFor: 7912, goalsAgainst: 7634, points: 104,
-      form: ['W', 'L', 'W', 'W', 'W'],
-      homeWins: 31, awayWins: 21, cleanSheets: 0,
-      avgPossession: 50, avgShots: 90.1, avgShotsOnTarget: 43.2,
-      xG: 0, xGA: 0
-    }
-  },
-  {
-    id: 'mia', name: 'Miami Heat', shortName: 'MIA', logo: '🔥',
-    color: '#98002E', league: 'NBA', eloRating: 1650,
-    stats: {
-      played: 70, wins: 44, draws: 0, losses: 26,
-      goalsFor: 7412, goalsAgainst: 7380, points: 88,
-      form: ['L', 'W', 'W', 'D', 'L'],
-      homeWins: 26, awayWins: 18, cleanSheets: 0,
-      avgPossession: 50, avgShots: 86.3, avgShotsOnTarget: 40.9,
-      xG: 0, xGA: 0
-    }
-  }
-]
+const teamsById = new Map(premierLeagueTeams.map(t => [t.id, t]))
 
-export const allTeams = [...premierLeagueTeams, ...nbaTeams]
+// Single shared lookup so components don't each re-implement `premierLeagueTeams.find(...)`.
+export const getTeam = (id: string): Team | undefined => teamsById.get(id)

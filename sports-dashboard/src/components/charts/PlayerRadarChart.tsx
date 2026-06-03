@@ -26,12 +26,13 @@ export default function PlayerRadarChart({ players }: Props) {
 
   const datasets = players.slice(0, 3).map((player, i) => {
     const s = player.stats
+    const apps = Math.max(1, s.appearances) // avoid divide-by-zero for a player with 0 apps
     const data = [
       normalize(s.goals, 30),
       normalize(s.assists, 15),
-      normalize(s.shotsOnTarget / s.appearances, 3),
+      normalize(s.shotsOnTarget / apps, 3),
       normalize(s.dribbles, 100),
-      normalize((s.tackles + s.interceptions) / s.appearances, 2),
+      normalize((s.tackles + s.interceptions) / apps, 2),
       normalize(s.passAccuracy, 100)
     ]
     return {

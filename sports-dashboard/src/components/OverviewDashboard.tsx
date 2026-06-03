@@ -1,4 +1,5 @@
-import { premierLeagueTeams } from '../data/teamsData'
+import { useMemo } from 'react'
+import { premierLeagueTeams, getTeam } from '../data/teamsData'
 import { topPlayers } from '../data/playersData'
 import { recentMatches } from '../data/matchesData'
 import { modelAccuracyStats } from '../models/predictionEngine'
@@ -11,7 +12,17 @@ interface Props {
 
 export default function OverviewDashboard({ liveMatches, onTabChange }: Props) {
   const leader = premierLeagueTeams[0]
-  const topScorer = topPlayers.reduce((a, b) => b.stats.goals > a.stats.goals ? b : a)
+  // These derive from static data, so compute them once instead of on every live-feed tick.
+  const topScorers = useMemo(
+    () => [...topPlayers].sort((a, b) => b.stats.goals - a.stats.goals).slice(0, 5),
+    []
+  )
+  const recentResults = useMemo(
+    () => recentMatches.filter(m => m.status === 'FT').slice(0, 4),
+    []
+  )
+  const topScorer = topScorers[0]
+  const maxGoals = Math.max(1, topScorer.stats.goals)
 
   const kpis = [
     { label: 'Live Matches', value: liveMatches.filter(m => m.status === 'LIVE').length, color: 'text-red-400', icon: '🔴', sub: 'in progress' },
@@ -63,9 +74,9 @@ export default function OverviewDashboard({ liveMatches, onTabChange }: Props) {
         <div className="bg-dark-800 rounded-xl border border-dark-600 p-5">
           <h3 className="text-white font-semibold mb-4">Recent Results</h3>
           <div className="space-y-2">
-            {recentMatches.filter(m => m.status === 'FT').slice(0, 4).map(match => {
-              const home = premierLeagueTeams.find(t => t.id === match.homeTeam)
-              const away = premierLeagueTeams.find(t => t.id === match.awayTeam)
+            {recentResults.map(match => {
+              const home = getTeam(match.homeTeam)
+              const away = getTeam(match.awayTeam)
               return (
                 <div key={match.id} className="flex items-center gap-2 p-2.5 bg-dark-700 rounded-lg">
                   <span className="text-sm">{home?.logo}</span>
@@ -85,12 +96,8 @@ export default function OverviewDashboard({ liveMatches, onTabChange }: Props) {
         <div className="bg-dark-800 rounded-xl border border-dark-600 p-5">
           <h3 className="text-white font-semibold mb-4">Golden Boot Race</h3>
           <div className="space-y-3">
-            {topPlayers
-              .sort((a, b) => b.stats.goals - a.stats.goals)
-              .slice(0, 5)
-              .map((player, i) => {
-                const team = premierLeagueTeams.find(t => t.id === player.team)
-                const maxGoals = topPlayers[0].stats.goals
+            {topScorers.map((player, i) => {
+                const team = getTeam(player.team)
                 return (
                   <div key={player.id} className="flex items-center gap-3">
                     <span className="text-gray-500 text-xs w-4">{i + 1}</span>
@@ -126,8 +133,8 @@ export default function OverviewDashboard({ liveMatches, onTabChange }: Props) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {liveMatches.filter(m => m.status === 'LIVE').map(match => {
-              const home = premierLeagueTeams.find(t => t.id === match.homeTeam)
-              const away = premierLeagueTeams.find(t => t.id === match.awayTeam)
+              const home = getTeam(match.homeTeam)
+              const away = getTeam(match.awayTeam)
               return (
                 <div key={match.id} className="bg-dark-700 rounded-lg p-4 border border-dark-600 flex items-center justify-between">
                   <div className="flex items-center gap-2">

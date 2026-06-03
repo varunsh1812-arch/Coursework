@@ -102,16 +102,3 @@ export const seasonProgressData: SeasonData[] = (() => {
   })
   return data
 })()
-
-export const headToHeadData = [
-  { season: '2019-20', home: 'mci', away: 'ars', homeGoals: 3, awayGoals: 0 },
-  { season: '2019-20', home: 'ars', away: 'mci', homeGoals: 0, awayGoals: 1 },
-  { season: '2020-21', home: 'mci', away: 'ars', homeGoals: 1, awayGoals: 0 },
-  { season: '2020-21', home: 'ars', away: 'mci', homeGoals: 1, awayGoals: 0 },
-  { season: '2021-22', home: 'mci', away: 'ars', homeGoals: 5, awayGoals: 0 },
-  { season: '2021-22', home: 'ars', away: 'mci', homeGoals: 1, awayGoals: 2 },
-  { season: '2022-23', home: 'mci', away: 'ars', homeGoals: 4, awayGoals: 1 },
-  { season: '2022-23', home: 'ars', away: 'mci', homeGoals: 1, awayGoals: 3 },
-  { season: '2023-24', home: 'mci', away: 'ars', homeGoals: 0, awayGoals: 1 },
-  { season: '2023-24', home: 'ars', away: 'mci', homeGoals: 0, awayGoals: 0 }
-]
