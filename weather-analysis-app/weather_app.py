@@ -21,7 +21,7 @@ import sys
 
 import requests
 
-from weather import analyzer, fetcher, geocoder, report, sample_data, visualizer
+from weather import analyzer, cache, fetcher, geocoder, report, sample_data, visualizer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_OUTDIR = os.path.join(HERE, "outputs")
@@ -44,26 +44,73 @@ def _print_summary(analysis: analyzer.Analysis) -> None:
     print("=" * 60 + "\n")
 
 
-def load_data(args: argparse.Namespace) -> fetcher.WeatherData:
-    """Resolve the location and fetch live data, or fall back to the sample."""
-    if args.offline:
-        print("Offline mode requested — using bundled sample data.")
-        return sample_data.load_sample()
+def _offline_data(city: str) -> fetcher.WeatherData:
+    """Best available offline data: this city's cache, then newest cache, then sample."""
+    cached = cache.load_city(city)
+    if cached is not None:
+        print(f"  -> Using cached data for '{city}'.")
+        return cached
+    latest = cache.load_latest()
+    if latest is not None:
+        print(f"  -> Using most recent cached city: {latest.location.label}.")
+        return latest
+    print("  -> Using bundled sample data.")
+    return sample_data.load_sample()
 
+
+def get_city_data(city: str, args: argparse.Namespace) -> fetcher.WeatherData:
+    """Fetch one city's live data (caching it), or fall back to offline data."""
+    if args.offline:
+        return _offline_data(city)
     try:
-        print(f"Looking up '{args.city}' ...")
-        location = geocoder.geocode(args.city)
+        location = geocoder.geocode(city)
         print(f"  -> {location.label} ({location.latitude:.3f}, {location.longitude:.3f})")
-        print("Fetching live weather from Open-Meteo ...")
         data = fetcher.fetch_weather(
             location, past_days=args.past_days, forecast_days=args.forecast_days
         )
-        print("  -> live data received.")
+        cache.save(data)
+        print("  -> live data received and cached.")
         return data
     except (requests.RequestException, LookupError) as exc:
         print(f"  ! Could not fetch live data ({exc}).")
-        print("  -> Falling back to bundled sample data.")
-        return sample_data.load_sample()
+        return _offline_data(city)
+
+
+def load_data(args: argparse.Namespace) -> fetcher.WeatherData:
+    """Resolve the location and fetch live data, or fall back to the sample."""
+    if args.offline:
+        print("Offline mode requested.")
+    else:
+        print(f"Looking up '{args.city}' and fetching live weather ...")
+    return get_city_data(args.city, args)
+
+
+def run_comparison(args: argparse.Namespace) -> int:
+    """Fetch several cities and render a side-by-side comparison chart."""
+    cities = [c.strip() for c in args.compare.split(",") if c.strip()]
+    if len(cities) < 2:
+        print("Need at least two cities to compare (e.g. --compare \"London,Tokyo\").")
+        return 1
+
+    datasets = []
+    for city in cities:
+        print(f"Fetching '{city}' ...")
+        datasets.append(get_city_data(city, args))
+
+    os.makedirs(args.outdir, exist_ok=True)
+    path = os.path.join(args.outdir, "comparison.png")
+    visualizer.plot_comparison(datasets, path)
+
+    print("\n" + "=" * 60)
+    print("  CITY COMPARISON")
+    print("=" * 60)
+    for d in datasets:
+        temps = d.hourly["temperature_2m"]
+        print(f"  {d.location.label:<28} mean {temps.mean():5.1f}°C  "
+              f"range {temps.min():.1f}–{temps.max():.1f}°C")
+    print("=" * 60)
+    print(f"\nComparison chart: {os.path.relpath(path, HERE)}\nDone.")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,9 +119,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--past-days", type=int, default=7, help="Days of history (default: 7).")
     parser.add_argument("--forecast-days", type=int, default=7, help="Forecast days (default: 7).")
     parser.add_argument("--outdir", default=DEFAULT_OUTDIR, help="Output directory for charts.")
-    parser.add_argument("--offline", action="store_true", help="Use bundled sample data only.")
+    parser.add_argument("--offline", action="store_true", help="Use cached/sample data only.")
     parser.add_argument("--save-json", metavar="PATH", help="Also dump raw tidy data to JSON.")
+    parser.add_argument(
+        "--compare",
+        metavar="CITIES",
+        help="Comma-separated cities to compare, e.g. \"London,Tokyo,Mumbai\".",
+    )
     args = parser.parse_args(argv)
+
+    if args.compare:
+        return run_comparison(args)
 
     data = load_data(args)
     analysis = analyzer.analyze(data)

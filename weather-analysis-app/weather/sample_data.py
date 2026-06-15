@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import os
 
-from .fetcher import WeatherData, parse_response
+from .fetcher import WeatherData, attach_air_quality, parse_response
 from .geocoder import Location
 
 _SAMPLE_PATH = os.path.join(os.path.dirname(__file__), "sample_payload.json")
@@ -30,4 +30,7 @@ def load_sample() -> WeatherData:
         longitude=float(loc["longitude"]),
         timezone=loc.get("timezone", "auto"),
     )
-    return parse_response(blob["payload"], location, source="offline-sample")
+    data = parse_response(blob["payload"], location, source="offline-sample")
+    if blob.get("air_quality_payload"):
+        attach_air_quality(data, blob["air_quality_payload"])
+    return data

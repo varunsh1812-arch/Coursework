@@ -35,16 +35,33 @@ def test_charts_and_report():
     a = analyzer.analyze(data)
     with tempfile.TemporaryDirectory() as tmp:
         charts = visualizer.render_all(data, a, tmp)
-        assert len(charts) == 5
+        # 5 core charts, plus optional wind-rose/daylight/air-quality when data allows.
+        assert len(charts) >= 5
+        names = {os.path.basename(c) for c in charts}
+        assert {"dashboard.png", "temperature.png", "daily_forecast.png"} <= names
         for c in charts:
             assert os.path.getsize(c) > 1000, f"{c} looks too small"
         rpt = report.write_report(data, a, charts, os.path.join(tmp, "report.md"))
         assert os.path.getsize(rpt) > 200
-    print("PASS: 5 charts rendered and report written")
+    print(f"PASS: {len(charts)} charts rendered and report written")
+
+
+def test_comparison_and_aqi():
+    data = sample_data.load_sample()
+    # Air quality and wind direction should be present in the bundled sample.
+    assert not data.air_quality.empty, "sample should include air-quality data"
+    assert "wind_direction_10m" in data.hourly.columns
+    a = analyzer.analyze(data)
+    assert "max_us_aqi" in a.summary and "mean_daylight_hours" in a.summary
+    with tempfile.TemporaryDirectory() as tmp:
+        path = visualizer.plot_comparison([data, data], os.path.join(tmp, "cmp.png"))
+        assert os.path.getsize(path) > 1000
+    print("PASS: air-quality, daylight and comparison chart all work")
 
 
 if __name__ == "__main__":
     test_sample_loads()
     test_analysis()
     test_charts_and_report()
+    test_comparison_and_aqi()
     print("\nAll tests passed.")

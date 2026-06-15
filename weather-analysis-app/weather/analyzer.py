@@ -51,6 +51,26 @@ def describe_weather_code(code: Any) -> str:
         return "Unknown"
 
 
+def aqi_category(us_aqi: Any) -> str:
+    """US EPA category label for a US AQI value."""
+    try:
+        v = float(us_aqi)
+    except (TypeError, ValueError):
+        return "Unknown"
+    bands = [
+        (50, "Good"),
+        (100, "Moderate"),
+        (150, "Unhealthy for sensitive groups"),
+        (200, "Unhealthy"),
+        (300, "Very unhealthy"),
+        (float("inf"), "Hazardous"),
+    ]
+    for limit, label in bands:
+        if v <= limit:
+            return label
+    return "Unknown"
+
+
 @dataclass
 class Analysis:
     """Computed insights derived from a :class:`WeatherData` object."""
@@ -105,6 +125,24 @@ def analyze(data: WeatherData) -> Analysis:
         summary["total_precipitation"] = round(float(hourly["precipitation"].sum()), 1)
     if not hourly.empty and "relative_humidity_2m" in hourly:
         summary["mean_humidity"] = round(float(hourly["relative_humidity_2m"].mean()), 1)
+
+    # Day length from sunrise/sunset (hours), if available.
+    if not daily.empty and {"sunrise", "sunset"}.issubset(daily.columns):
+        sunrise = pd.to_datetime(daily["sunrise"])
+        sunset = pd.to_datetime(daily["sunset"])
+        day_hours = (sunset - sunrise).dt.total_seconds() / 3600.0
+        summary["mean_daylight_hours"] = round(float(day_hours.mean()), 1)
+        summary["longest_day"] = day_hours.idxmax().date().isoformat()
+
+    # Air-quality summary, if available.
+    if not data.air_quality.empty:
+        aq = data.air_quality
+        if "us_aqi" in aq:
+            peak = float(aq["us_aqi"].max())
+            summary["max_us_aqi"] = round(peak, 0)
+            summary["aqi_category"] = aqi_category(peak)
+        if "pm2_5" in aq:
+            summary["mean_pm2_5"] = round(float(aq["pm2_5"].mean()), 1)
 
     hourly_stats = hourly.describe().round(2) if not hourly.empty else pd.DataFrame()
 

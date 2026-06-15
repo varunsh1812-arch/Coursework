@@ -56,8 +56,15 @@ def write_report(data: WeatherData, analysis: Analysis, charts: list[str], path:
         f"- **Total precipitation:** {_safe(s.get('total_precipitation'), ' mm')}",
         f"- **Temperature trend:** {analysis.temp_trend_per_day:+.2f} °C/day "
         f"({'warming' if analysis.temp_trend_per_day >= 0 else 'cooling'})",
-        "",
     ]
+    if "mean_daylight_hours" in s:
+        lines.append(f"- **Mean daylight:** {s['mean_daylight_hours']} h "
+                     f"(longest day {s.get('longest_day', 'n/a')})")
+    if "max_us_aqi" in s:
+        lines.append(f"- **Air quality:** peak US AQI {s['max_us_aqi']:.0f} "
+                     f"({s.get('aqi_category', 'n/a')}), "
+                     f"mean PM2.5 {s.get('mean_pm2_5', 'n/a')} µg/m³")
+    lines.append("")
 
     if not analysis.correlations.empty:
         lines += ["## Correlations (hourly)", "", _frame_to_md(analysis.correlations), ""]
@@ -75,6 +82,9 @@ def write_report(data: WeatherData, analysis: Analysis, charts: list[str], path:
         "daily_forecast": "7-day temperature & precipitation",
         "humidity_wind": "Humidity & wind",
         "temp_distribution": "Temperature distribution",
+        "wind_rose": "Wind rose (direction & speed)",
+        "daylight": "Hours of daylight",
+        "air_quality": "Air quality (PM2.5 / PM10 / US AQI)",
     }
     for key, title in titles.items():
         if key in chart_names:

@@ -10,3 +10,7 @@ outputs/*.png
 outputs/*.json
 outputs/*
 !outputs/.gitkeep
+
+# Live-fetch cache
+cache/
+.ipynb_checkpoints/

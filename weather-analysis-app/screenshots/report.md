@@ -1,13 +1,13 @@
 # Weather Analysis Report — London, United Kingdom
 
-*Generated 2026-06-15 14:51 from **live** data (lat 51.509, lon -0.126).*
+*Generated 2026-06-15 15:06 from **live** data (lat 51.509, lon -0.126).*
 
 ## Current conditions
 
 - **Conditions:** Overcast
-- **Temperature:** 23.3°C (feels like 21.1°C)
+- **Temperature:** 23.4°C (feels like 21.0°C)
 - **Humidity:** 39%
-- **Wind:** 16.2 km/h
+- **Wind:** 15.8 km/h
 
 ## Period summary
 
@@ -18,6 +18,8 @@
 - **Mean humidity:** 64.3%
 - **Total precipitation:** 21.2 mm
 - **Temperature trend:** +0.92 °C/day (warming)
+- **Mean daylight:** 16.6 h (longest day 2026-06-19)
+- **Air quality:** peak US AQI 73 (Moderate), mean PM2.5 7.3 µg/m³
 
 ## Correlations (hourly)
 
@@ -57,3 +59,12 @@
 
 ### Temperature distribution
 ![Temperature distribution](temp_distribution.png)
+
+### Wind rose (direction & speed)
+![Wind rose (direction & speed)](wind_rose.png)
+
+### Hours of daylight
+![Hours of daylight](daylight.png)
+
+### Air quality (PM2.5 / PM10 / US AQI)
+![Air quality (PM2.5 / PM10 / US AQI)](air_quality.png)
