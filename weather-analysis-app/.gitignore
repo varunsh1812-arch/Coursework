@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.DS_Store
+
+# Generated at runtime (the committed copies live in screenshots/).
+outputs/*.png
+outputs/*.json
+outputs/*
+!outputs/.gitkeep
